@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AML Prediction</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h1>AML Prediction</h1>
+    <form id="prediction-form">
+        <label for="Amount">Amount:</label>
+        <input type="text" id="Amount" name="Amount"><br>
+
+        <label for="Payment_currency">Payment Currency:</label>
+        <input type="text" id="Payment_currency" name="Payment_currency"><br>
+
+        <label for="Received_currency">Received Currency:</label>
+        <input type="text" id="Received_currency" name="Received_currency"><br>
+
+        <label for="Sender_bank_location">Sender Bank Location:</label>
+        <input type="text" id="Sender_bank_location" name="Sender_bank_location"><br>
+
+        <label for="Receiver_bank_location">Receiver Bank Location:</label>
+        <input type="text" id="Receiver_bank_location" name="Receiver_bank_location"><br>
+
+        <label for="Payment_type">Payment Type:</label>
+        <input type="text" id="Payment_type" name="Payment_type"><br>
+
+        <button type="submit">Predict</button>
+    </form>
+
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('prediction-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const data = {};
+            formData.forEach((value, key) => { data[key] = value });
+
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').innerText = 'Prediction: ' + data.prediction;
+            });
+        });
+    </script>
+</body>
+</html>
