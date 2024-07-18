@@ -8,6 +8,8 @@
 </head>
 <body>
     <h1>AML Prediction</h1>
+    
+    <!-- Single Prediction Form -->
     <form id="prediction-form">
         <label for="Amount">Amount:</label>
         <input type="text" id="Amount" name="Amount"><br>
@@ -32,7 +34,28 @@
 
     <div id="result"></div>
 
+    <!-- Bulk Prediction Form -->
+    <h2>Bulk Prediction</h2>
+    <form id="bulk-upload-form">
+        <label for="file">Upload CSV:</label>
+        <input type="file" id="file" name="file" accept=".csv"><br>
+        <button type="submit">Upload and Predict</button>
+    </form>
+
+    <div>
+        <label for="filter">Filter results:</label>
+        <select id="filter">
+            <option value="1">Prediction 1</option>
+            <option value="all">All</option>
+            <option value="0">Prediction 0</option>
+            
+        </select>
+    </div>
+
+    <div id="bulk-result"></div>
+
     <script>
+        // Single Prediction Form Handler
         document.getElementById('prediction-form').addEventListener('submit', function(event) {
             event.preventDefault();
 
@@ -49,8 +72,52 @@
             })
             .then(response => response.json())
             .then(data => {
-                document.getElementById('result').innerText = 'Prediction: ' + data.prediction;
+                document.getElementById('result').innerText = 'Prediction: ' + data.prediction + 
+                    '\nProbability: ' + JSON.stringify(data.probability);
             });
+        });
+
+        // Function to render bulk results
+        function renderBulkResults(data, filter) {
+            let resultsDiv = document.getElementById('bulk-result');
+            resultsDiv.innerHTML = '';
+
+            data.forEach((result, index) => {
+                if (filter === 'all' || result.prediction.toString() === filter) {
+                    resultsDiv.innerHTML += `<p>Record ${index + 1} - Prediction: ${result.prediction}, 
+                        Probability: ${JSON.stringify(result.probability)}</p>`;
+                }
+            });
+        }
+
+        // Bulk Prediction Form Handler
+        document.getElementById('bulk-upload-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const fileInput = document.getElementById('file');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            fetch('/bulk_predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                window.bulkData = data; // Store data globally for filtering
+                renderBulkResults(data, document.getElementById('filter').value);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('bulk-result').innerText = 'Error uploading file: ' + error.message;
+            });
+        });
+
+        // Filter results based on dropdown selection
+        document.getElementById('filter').addEventListener('change', function() {
+            if (window.bulkData) {
+                renderBulkResults(window.bulkData, this.value);
+            }
         });
     </script>
 </body>

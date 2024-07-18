@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 import joblib
 import numpy as np
+import pandas as pd
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -41,14 +42,50 @@ def predict():
     features = np.array(features).reshape(1, -1)
     features = scaler.transform(features)
 
-    # two endpoints to fetch prediction and probability from the backend
     prediction = model.predict(features)[0]
     probabilities = model.predict_proba(features)[0]
     return jsonify({
         'prediction': int(prediction),
         'probability': probabilities.tolist()
+    })
+
+@app.route('/bulk_predict', methods=['POST'])
+def bulk_predict():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part in the request'}), 400
+
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({'error': 'No file selected for uploading'}), 400
+
+    if file and file.filename.endswith('.csv'):
+        df = pd.read_csv(file)
         
-        })
+        # Verify the required columns are present
+        required_columns = ['Amount', 'Payment_currency', 'Received_currency', 'Sender_bank_location', 'Receiver_bank_location', 'Payment_type']
+        if not all(column in df.columns for column in required_columns):
+            return jsonify({'error': f'Missing one or more required columns: {required_columns}'}), 400
+
+        # Encode categorical features
+        for column in ['Payment_currency', 'Received_currency', 'Sender_bank_location', 'Receiver_bank_location', 'Payment_type']:
+            df[column] = label_encoders[column].transform(df[column])
+
+        features = scaler.transform(df[required_columns])
+        predictions = model.predict(features)
+        probabilities = model.predict_proba(features)
+
+        # Prepare the response
+        results = []
+        for prediction, probability in zip(predictions, probabilities):
+            results.append({
+                'prediction': int(prediction),
+                'probability': probability.tolist()
+            })
+        
+        return jsonify(results)
+    else:
+        return jsonify({'error': 'Allowed file types are csv'}), 400
 
 if __name__ == '__main__':
     app.run(debug=True)
